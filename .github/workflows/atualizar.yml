@@ -1,0 +1,23 @@
+name: Atualizar index.html
+
+on:
+  push:
+    paths:
+      - 'notificacao-encomendas-v*.html'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copiar a versao mais recente para index.html
+        run: |
+          latest=$(ls -1 notificacao-encomendas-v*.html | sort -V | tail -n 1)
+          cp "$latest" index.html
+      - name: Guardar alteracao
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Atualizar index.html"
+          git push
