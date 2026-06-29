@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notificação de Encomendas — WhatsApp</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg: #faf8f4;
+    --panel: #ffffff;
+    --ink: #23262f;
+    --ink-soft: #5a5e6b;
+    --line: #e6e1d8;
+    --sidebar: #23262f;
+    --sidebar-ink: #efece4;
+    --accent: #c75d2c;
+    --accent-soft: #f3e2d4;
+    --ok: #4f7d52;
+    --ok-soft: #e3ede4;
+    --warn: #b3471f;
+    --warn-soft: #fbe3da;
+    --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);height:100%;}
+  body{display:flex;flex-direction:column;min-height:100vh;}
+
+  .topbar{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 18px;background:var(--sidebar);color:var(--sidebar-ink);
+    position:sticky;top:0;z-index:50;
+  }
+  .topbar h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.02em;flex:0 0 auto;}
+  .topbar .tag{font-size:11px;color:#c9c4b6;font-family:var(--mono);}
+  .topbar .spacer{flex:1;}
+  .btn{
+    border:1px solid transparent;background:var(--accent);color:#fff;
+    padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:var(--sans);white-space:nowrap;
+  }
+  .btn:hover{filter:brightness(1.06);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.ghost{background:transparent;border:1px solid #ffffff33;color:var(--sidebar-ink);}
+  .btn.ghost:hover{background:#ffffff14;}
+  .btn.ghost-light{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn.ghost-light:hover{background:#00000008;}
+  .btn.small{padding:5px 10px;font-size:12px;border-radius:6px;}
+  .btn.ok{background:var(--ok);}
+
+  /* ---------- Upload screen ---------- */
+  .upload-wrap{max-width:980px;margin:40px auto;padding:0 20px 60px;flex:1;}
+  .upload-wrap h2{font-size:22px;margin:0 0 6px;}
+  .upload-wrap p.lead{color:var(--ink-soft);margin:0 0 28px;font-size:14px;line-height:1.55;}
+
+  .flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  @media (max-width:860px){ .flow-grid{grid-template-columns:1fr;} }
+
+  .flow-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .flow-card .step{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;}
+  .flow-card h3{margin:6px 0 6px;font-size:17px;}
+  .flow-card p.desc{margin:0 0 16px;font-size:13px;color:var(--ink-soft);line-height:1.5;}
+
+  .drop{
+    background:var(--bg);border:1.5px dashed var(--line);border-radius:12px;
+    padding:18px;text-align:left;transition:.15s border-color;
+  }
+  .drop.has-file{border-color:var(--ok);background:var(--ok-soft);}
+  .drop p{margin:0 0 12px;font-size:12.5px;color:var(--ink-soft);}
+  .drop input[type=file]{display:block;font-size:12px;width:100%;}
+  .drop .filename{margin-top:10px;font-size:12px;font-family:var(--mono);color:var(--ink);word-break:break-all;}
+
+  .flow-card .start-row{margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .status-msg{font-size:12.5px;color:var(--ink-soft);}
+
+  .tpl-editor{margin-top:16px;}
+  .tpl-body{margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .tpl-body label{display:block;font-size:11px;font-weight:700;margin:12px 0 5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  .tpl-body label:first-of-type{margin-top:2px;}
+  .tpl-body textarea{
+    width:100%;font-family:var(--mono);font-size:12px;padding:9px;border:1px solid var(--line);
+    border-radius:8px;resize:vertical;line-height:1.5;color:var(--ink);background:#fff;
+  }
+  .tpl-body textarea:focus{outline:none;border-color:var(--accent);}
+  .tpl-actions{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .hint-small{font-size:11.5px;color:var(--ink-soft);margin:0 0 8px;line-height:1.5;}
+  .hint-small code{background:#00000008;padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:11px;}
+
+  .howto{margin-top:30px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+  .howto h4{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .howto ol{margin:0;padding-left:20px;font-size:13.5px;line-height:1.7;color:var(--ink);}
+  .howto li b{color:var(--accent);}
+  .howto p.note{font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;}
+
+  /* ---------- Workspace ---------- */
+  .workspace{display:none;flex:1;min-height:0;}
+  body.ready .workspace{display:flex;}
+  body.ready .upload-wrap{display:none;}
+
+  .clients-panel{
+    width:260px;flex:0 0 auto;background:var(--sidebar);color:var(--sidebar-ink);
+    overflow-y:auto;padding:10px;
+  }
+  .clients-panel .search-box{
+    width:100%;padding:7px 9px;border-radius:6px;border:1px solid #ffffff22;
+    background:#ffffff10;color:#fff;font-size:12.5px;margin-bottom:10px;
+  }
+  .client-card{
+    padding:10px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer;
+    border:1px solid transparent;
+  }
+  .client-card:hover{background:#ffffff0c;}
+  .client-card.active{background:var(--accent);}
+  .client-card .name-row{display:flex;align-items:center;gap:6px;}
+  .client-card .name{font-size:13px;font-weight:600;}
+  .client-card .meta{font-size:11px;color:#cfcabd;font-family:var(--mono);margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:6px;}
+  .client-card.active .meta{color:#ffe8d8;}
+  .client-card .done-tick{color:#88c98a;font-weight:700;}
+  .client-card.active .done-tick{color:#d9ffd9;}
+  .empty-list{font-size:12.5px;color:#cfcabd;padding:14px 8px;line-height:1.5;}
+
+  .badge{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:20px;font-family:var(--mono);white-space:nowrap;}
+  .badge.ok{background:var(--ok-soft);color:var(--ok);}
+  .badge.warn{background:var(--warn-soft);color:var(--warn);}
+  .client-card.active .badge.ok{background:#ffffff2a;color:#d9ffd9;}
+  .client-card.active .badge.warn{background:#ffffff2a;color:#ffd9c9;}
+
+  .main-panel{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  .toolbar{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);
+    background:var(--panel);flex-wrap:wrap;
+  }
+  .toolbar .hint{font-size:12px;color:var(--ink-soft);}
+
+  .message-scroll{flex:1;overflow:auto;background:#efebe3;padding:28px 18px;display:flex;justify-content:center;}
+  .message-card{max-width:520px;width:100%;}
+  .message-card .top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px;}
+  .message-card .top-row h3{font-size:16px;margin:0 0 4px;}
+  .message-card .top-row .sub{font-size:12px;color:var(--ink-soft);font-family:var(--mono);}
+  .bubble-wrap{position:relative;margin-bottom:6px;}
+  .bubble{
+    background:#dcf8c6;border-radius:10px;padding:16px 18px;font-size:13.5px;line-height:1.65;
+    white-space:pre-wrap;color:#1c1c1c;box-shadow:0 1px 2px rgba(0,0,0,.12);
+    overflow-wrap:anywhere;word-break:break-word;max-width:100%;
+  }
+  .bubble b, .bubble strong{font-weight:700;}
+  .bubble .ph{background:#ffe9b0;border-radius:3px;padding:0 2px;}
+  .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .sent-flag{font-size:12.5px;color:var(--ok);font-weight:600;display:flex;align-items:center;gap:6px;margin-top:14px;}
+  .entry-empty{margin:80px auto;text-align:center;color:var(--ink-soft);font-size:14px;max-width:320px;line-height:1.6;}
+
+  .current-panel{width:280px;flex:0 0 auto;background:var(--panel);overflow-y:auto;padding:16px;}
+  .current-panel h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin:0 0 10px;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
+  .summary-box{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;}
+  .summary-box .num{font-size:20px;font-weight:700;font-family:var(--mono);}
+  .summary-box .lbl{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .detail-line{font-size:12.5px;margin:6px 0;color:var(--ink);}
+  .detail-line span{color:var(--ink-soft);}
+  .empty-note{font-size:12.5px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
+
+  .app-version{font-size:11px;font-family:var(--mono);color:#9a948c;}
+
+  @media (max-width:980px){
+    .workspace{flex-direction:column;}
+    .clients-panel{width:100%;max-height:160px;}
+    .current-panel{width:100%;max-height:220px;}
+    .main-panel{border-left:none;border-right:none;}
+  }
+</style>
+</head>
+<body>
+
+
+<div class="topbar">
+  <h1>Notificação de Encomendas</h1>
+  <span class="tag" id="topTag">à espera do ficheiro…</span>
+  <div class="spacer"></div>
+  <button class="btn ghost small" id="resetBtn" style="display:none;">Sair</button>
+  <span class="app-version">v16</span>
+</div>
+
+<div class="upload-wrap">
+  <h2>Avisa os clientes pelo WhatsApp</h2>
+  <p class="lead">Escolhe um dos dois momentos da encomenda e carrega o Excel correspondente. O sistema prepara automaticamente a mensagem certa — com ou sem valor pendente — pronta a enviar.</p>
+
+  <div class="flow-grid">
+
+    <div class="flow-card" id="card-compra">
+      <div class="step">Espaço 1</div>
+      <h3>Aviso de Compra</h3>
+      <p class="desc">Avisa o cliente de que a compra foi feita e informa a previsão de chegada.</p>
+      <div class="drop" id="drop-compra">
+        <p>Célula A1: previsão de chegada. A partir da linha 2: nome, contacto, link, valor remanescente.</p>
+        <input type="file" id="file-compra" accept=".xlsx,.xls">
+        <div class="filename" id="filename-compra"></div>
+      </div>
+      <div class="start-row">
+        <button class="btn" id="start-compra" disabled>Preparar mensagens</button>
+        <span class="status-msg" id="status-compra"></span>
+      </div>
+      <div class="tpl-editor">
+        <button class="btn ghost-light small tpl-toggle" id="tplToggle-compra">✎ Editar mensagens</button>
+        <div class="tpl-body" id="tplBody-compra" style="display:none;">
+          <p class="hint-small">Códigos disponíveis: <code>{data}</code> <code>{valor}</code> <code>{links_verb}</code> <code>{links_label}</code> <code>{links}</code>. Texto entre *asteriscos* fica em negrito no WhatsApp.</p>
+          <label>Mensagem — sem valor remanescente</label>
+          <textarea id="tplSem-compra" rows="8"></textarea>
+          <label>Mensagem — com valor remanescente</label>
+          <textarea id="tplCom-compra" rows="9"></textarea>
+          <div class="tpl-actions">
+            <button class="btn small tpl-save" id="tplSave-compra">Guardar mensagens</button>
+            <button class="btn ghost-light small tpl-reset" id="tplReset-compra">Repor texto original</button>
+            <span class="status-msg" id="tplStatus-compra"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card" id="card-chegada">
+      <div class="step">Espaço 2</div>
+      <h3>Aviso de Chegada</h3>
+      <p class="desc">Avisa o cliente de que a encomenda chegou e está disponível para levantamento.</p>
+      <div class="drop" id="drop-chegada">
+        <p>Célula A1: data da compra. A partir da linha 2: sacola, nome, contacto, valor em falta, link.</p>
+        <input type="file" id="file-chegada" accept=".xlsx,.xls">
+        <div class="filename" id="filename-chegada"></div>
+      </div>
+      <div class="start-row">
+        <button class="btn" id="start-chegada" disabled>Preparar mensagens</button>
+        <span class="status-msg" id="status-chegada"></span>
+      </div>
+      <div class="tpl-editor">
+        <button class="btn ghost-light small tpl-toggle" id="tplToggle-chegada">✎ Editar mensagens</button>
+        <div class="tpl-body" id="tplBody-chegada" style="display:none;">
+          <p class="hint-small">Códigos disponíveis: <code>{data}</code> <code>{sacola}</code> <code>{valor}</code> <code>{links_verb}</code> <code>{links_label}</code> <code>{links}</code>. Texto entre *asteriscos* fica em negrito no WhatsApp.</p>
+          <label>Mensagem — sem valor em falta</label>
+          <textarea id="tplSem-chegada" rows="8"></textarea>
+          <label>Mensagem — com valor em falta</label>
+          <textarea id="tplCom-chegada" rows="9"></textarea>
+          <div class="tpl-actions">
+            <button class="btn small tpl-save" id="tplSave-chegada">Guardar mensagens</button>
+            <button class="btn ghost-light small tpl-reset" id="tplReset-chegada">Repor texto original</button>
+            <span class="status-msg" id="tplStatus-chegada"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="howto">
+    <h4>Como funciona</h4>
+    <p class="note">Nota: esta ferramenta não envia mensagens automaticamente (não há acesso à API oficial do WhatsApp Business). Ela prepara o texto certo e abre o WhatsApp já com a mensagem escrita — tu só confirmas e envias.</p>
+    <ol>
+      <li>Se precisares, abre <b>"Editar mensagens"</b> no espaço relevante para ajustar o texto antes de começar.</li>
+      <li>Carrega o Excel desse espaço e clica em <b>Preparar mensagens</b>.</li>
+      <li>Escolhe um cliente na lista da esquerda. Se o mesmo cliente/sacola aparecer em várias linhas do Excel, o sistema junta tudo numa só mensagem: soma o valor e lista todos os links.</li>
+      <li>Clica em <b>Abrir no WhatsApp</b>: confirma e envia. O nome fica marcado ✓ à esquerda e o sistema avança automaticamente para o cliente seguinte.</li>
+      <li>Usa "Anterior/Seguinte" ou a busca para voltar atrás quando precisares.</li>
+    </ol>
+  </div>
+
+</div>
+
+<div class="workspace">
+  <div class="clients-panel" id="clientsPanel">
+    <input class="search-box" id="clientSearch" placeholder="Filtrar por nome…">
+    <div id="clientList"></div>
+  </div>
+
+  <div class="main-panel">
+    <div class="toolbar">
+      <span class="hint" id="countsLabel"></span>
+    </div>
+    <div class="message-scroll" id="messageScroll"></div>
+  </div>
+
+  <div class="current-panel" id="currentPanel">
+    <h3>Resumo</h3>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div id="activeDetail"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const COUNTRY_CODE = "258";
+
+  // ---------------- Templates por defeito ----------------
+  const DEFAULT_TPL_COMPRA_SEM = `Olá, aqui escreve Dércio.
+
+Já efectuamos a compra da encomenda e tem previsão de chegada para o dia {data}. No entanto, a encomenda pode chegar antes, no dia previsto ou depois.
+Abaixo, {links_verb} {links_label} com os artigos adquiridos. Agradeço que nos informe caso exista algum erro.
+{links}`;
+
+  const DEFAULT_TPL_COMPRA_COM = `Olá, aqui escreve Dércio.
+
+Já efectuamos a compra da encomenda e tem previsão de chegada para o dia {data}. No entanto, a encomenda pode chegar antes, no dia previsto ou depois.
+Gostaria de recordar que tem um saldo remanescente de *{valor}*, que poderá ser pago quando a encomenda chegar.
+Abaixo, {links_verb} {links_label} com os artigos adquiridos. Agradeço que nos informe caso exista algum erro.
+{links}`;
+
+  const DEFAULT_TPL_CHEGADA_SEM = `Olá, aqui escreve Dércio.
+
+A encomenda do dia de {data} chegou e está disponível para levantamento na Malhangalene (Rua do Príncipe Godido x Rua da Guarda), de segunda a sexta, das 8h às 17h, e ao sábado, das 8h às 12h (excepto feriados).
+Ao chegar, contacte 873150160 e informe que veio levantar a sacola número *{sacola}*.
+Para entregas na cidade, contacte o motoboy Horácio (848131388 ou 878131388) e o custo é de 100,00 MZN.
+A encomenda estará disponível por 2 semanas.
+Abaixo, {links_verb} {links_label} com os artigos que chegaram.
+{links}`;
+
+  const DEFAULT_TPL_CHEGADA_COM = `Olá, aqui escreve Dércio.
+
+A encomenda do dia {data} chegou mas é necessário transferir o valor em falta, *{valor}*, para receber o número da sacola.
+O levantamento é feito na Malhangalene (Rua do Príncipe Godido x Rua da Guarda), de segunda a sexta, das 8h às 17h, e ao sábado, das 8h às 12h (excepto feriados).
+Para entregas na cidade, contacte o motoboy Horácio (848131388 ou 878131388) e o custo é de 100,00 MZN.
+A encomenda estará disponível por 2 semanas.
+Abaixo, {links_verb} {links_label} com os artigos que chegaram.
+{links}`;
+
+  // ---------------- Configuração dos dois espaços ----------------
+  const FLOWS = {
+    compra: {
+      id: "compra", label: "Aviso de Compra",
+      cols: { data:"A", nome:"B", contacto:"C", link:"D", valor:"E" },
+      hasSacola: false, groupMode: "positional", fillDownNome: true,
+      storageKey: "notif_tpl_compra_v1",
+      defaultSem: DEFAULT_TPL_COMPRA_SEM, defaultCom: DEFAULT_TPL_COMPRA_COM,
+      tpl: { sem: DEFAULT_TPL_COMPRA_SEM, com: DEFAULT_TPL_COMPRA_COM }
+    },
+    chegada: {
+      id: "chegada", label: "Aviso de Chegada",
+      cols: { data:"A", sacola:"B", nome:"C", contacto:"D", valor:"E", link:"F" },
+      hasSacola: true, groupMode: "byValue", fillDownNome: true,
+      storageKey: "notif_tpl_chegada_v1",
+      defaultSem: DEFAULT_TPL_CHEGADA_SEM, defaultCom: DEFAULT_TPL_CHEGADA_COM,
+      tpl: { sem: DEFAULT_TPL_CHEGADA_SEM, com: DEFAULT_TPL_CHEGADA_COM }
+    }
+  };
+
+  let entries = [];
+  let activeKey = null;
+  let activeFlow = null;
+  let xlsxFiles = { compra: null, chegada: null };
+
+  const $ = (sel) => document.querySelector(sel);
+
+  function normalize(s){
+    return (s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+
+  function formatDateValue(raw){
+    if (raw instanceof Date && !isNaN(raw)){
+      const dd = String(raw.getDate()).padStart(2,"0");
+      const mm = String(raw.getMonth()+1).padStart(2,"0");
+      return `${dd}/${mm}`;
+    }
+    if (raw === null || raw === undefined) return "";
+    return String(raw).trim();
+  }
+
+  function formatMZN(value){
+    value = Number(value) || 0;
+    const neg = value < 0; value = Math.abs(value);
+    let [intPart, decPart] = value.toFixed(2).split(".");
+    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return (neg ? "-" : "") + intPart + "," + decPart + " MZN";
+  }
+
+  function digitsOnly(s){ return (s||"").toString().replace(/\D/g,""); }
+
+  function waLink(contact, text){
+    let digits = digitsOnly(contact);
+    if (!digits.startsWith(COUNTRY_CODE)) digits = COUNTRY_CODE + digits;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+  }
+
+  function linksInfo(links){
+    const list = (links||[]).filter(Boolean);
+    return {
+      verb: list.length > 1 ? "seguem" : "segue",
+      label: list.length > 1 ? "os links" : "o link",
+      block: list.join("\n\n")
+    };
+  }
+
+  function buildMessage(e, flow){
+    const tpl = e.temValor ? flow.tpl.com : flow.tpl.sem;
+    const li = linksInfo(e.links);
+    let msg = tpl
+      .replace(/\{data\}/g, e.dateDisplay)
+      .replace(/\{sacola\}/g, e.sacola || "")
+      .replace(/\{valor\}/g, formatMZN(e.valor))
+      .replace(/\{links_verb\}/g, li.verb)
+      .replace(/\{links_label\}/g, li.label)
+      .replace(/\{links\}/g, li.block);
+
+    // Clientes com (BM) ou (RdB) no nome: acrescenta o nome no fim, depois de uma linha em branco
+    const nomeTrim = (e.nome || "").trim();
+    if (/\((BM|RdB)\)\s*$/.test(nomeTrim)){
+      msg += "\n\n" + nomeTrim;
+    }
+    return msg;
+  }
+
+  // ---------------- Templates: carregar/guardar por espaço ----------------
+  function loadTemplates(flow){
+    try{
+      const raw = localStorage.getItem(flow.storageKey);
+      if (raw){
+        const saved = JSON.parse(raw);
+        if (saved.sem) flow.tpl.sem = saved.sem;
+        if (saved.com) flow.tpl.com = saved.com;
+      }
+    }catch(e){ /* usa os templates por defeito */ }
+    $("#tplSem-"+flow.id).value = flow.tpl.sem;
+    $("#tplCom-"+flow.id).value = flow.tpl.com;
+  }
+  function saveTemplates(flow){
+    flow.tpl.sem = $("#tplSem-"+flow.id).value || flow.defaultSem;
+    flow.tpl.com = $("#tplCom-"+flow.id).value || flow.defaultCom;
+    try{ localStorage.setItem(flow.storageKey, JSON.stringify(flow.tpl)); }catch(e){ /* fica só em memória */ }
+    const status = $("#tplStatus-"+flow.id);
+    status.textContent = "Guardado ✓";
+    setTimeout(()=>{ status.textContent = ""; }, 1800);
+  }
+
+  Object.values(FLOWS).forEach(flow=>{
+    loadTemplates(flow);
+    $("#tplToggle-"+flow.id).addEventListener("click", ()=>{
+      const body = $("#tplBody-"+flow.id);
+      const open = body.style.display !== "none";
+      body.style.display = open ? "none" : "block";
+      $("#tplToggle-"+flow.id).textContent = (open ? "✎ " : "▾ ") + "Editar mensagens";
+    });
+    $("#tplSave-"+flow.id).addEventListener("click", ()=> saveTemplates(flow));
+    $("#tplReset-"+flow.id).addEventListener("click", ()=>{
+      if (!confirm("Repor o texto original das duas mensagens deste espaço? Perdes as alterações feitas.")) return;
+      $("#tplSem-"+flow.id).value = flow.defaultSem;
+      $("#tplCom-"+flow.id).value = flow.defaultCom;
+      saveTemplates(flow);
+    });
+
+    // Upload deste espaço
+    const fileInput = $("#file-"+flow.id);
+    fileInput.addEventListener("change", (ev)=>{
+      xlsxFiles[flow.id] = ev.target.files[0] || null;
+      $("#filename-"+flow.id).textContent = xlsxFiles[flow.id] ? xlsxFiles[flow.id].name : "";
+      $("#drop-"+flow.id).classList.toggle("has-file", !!xlsxFiles[flow.id]);
+      $("#start-"+flow.id).disabled = !xlsxFiles[flow.id];
+    });
+
+    $("#start-"+flow.id).addEventListener("click", async ()=>{
+      const btn = $("#start-"+flow.id), status = $("#status-"+flow.id);
+      btn.disabled = true;
+      status.textContent = "A processar Excel…";
+      try{
+        entries = await parseFlowExcel(xlsxFiles[flow.id], flow);
+      }catch(err){
+        status.textContent = "Erro a ler o Excel: " + err.message;
+        btn.disabled = false;
+        return;
+      }
+      if (!entries.length){
+        status.textContent = "Não encontrei nenhuma linha com dados a partir da linha 2.";
+        btn.disabled = false;
+        return;
+      }
+      activeFlow = flow;
+      document.body.classList.add("ready");
+      topTag().textContent = flow.label + " · " + (xlsxFiles[flow.id].name||"") + " · " + entries.length + " cliente(s)";
+      $("#resetBtn").style.display = "inline-block";
+      renderAll();
+      selectEntry(entries[0].key);
+    });
+  });
+
+  function topTag(){ return $("#topTag"); }
+
+  $("#resetBtn").addEventListener("click", ()=>{
+    if (!confirm("Sair e voltar ao ecrã inicial? O que já marcaste como enviado nesta sessão será perdido — começa tudo do zero da próxima vez.")) return;
+    entries = [];
+    activeKey = null;
+    activeFlow = null;
+    document.body.classList.remove("ready");
+    $("#resetBtn").style.display = "none";
+    topTag().textContent = "à espera do ficheiro…";
+    clientSearch.value = "";
+    Object.values(FLOWS).forEach(flow=>{
+      xlsxFiles[flow.id] = null;
+      const fileInput = $("#file-"+flow.id);
+      if (fileInput) fileInput.value = "";
+      $("#filename-"+flow.id).textContent = "";
+      $("#drop-"+flow.id).classList.remove("has-file");
+      $("#start-"+flow.id).disabled = true;
+      $("#status-"+flow.id).textContent = "";
+    });
+  });
+
+  function looksLikeDateCell(raw){
+    if (raw instanceof Date && !isNaN(raw)) return true;
+    if (typeof raw === "string" && /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(raw.trim())) return true;
+    return false;
+  }
+
+  async function parseFlowExcel(file, flow){
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array", cellDates:true});
+
+    // Procura, entre todas as folhas do ficheiro, a primeira em que A2 pareça uma data
+    // (a linha 1 é o cabeçalho; assim ignora automaticamente outras folhas, como "Clientes").
+    let ws = null;
+    for (const sheetName of wb.SheetNames){
+      const candidate = wb.Sheets[sheetName];
+      const a2 = candidate["A2"] ? candidate["A2"].v : null;
+      if (looksLikeDateCell(a2)){ ws = candidate; break; }
+    }
+    if (!ws) throw new Error("Não encontrei nenhuma folha com uma data válida em A2.");
+
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    const lastRow = range.e.r + 1;
+    const cols = flow.cols;
+
+    function readRow(r){
+      const dateCell = ws[cols.data+r];
+      const nomeCell = ws[cols.nome+r];
+      const sacolaCell = cols.sacola ? ws[cols.sacola+r] : null;
+      const contactoCell = ws[cols.contacto+r];
+      const valorCell = ws[cols.valor+r];
+      const linkCell = ws[cols.link+r];
+      return {
+        dateDisplay: formatDateValue(dateCell ? dateCell.v : null),
+        nome: nomeCell ? String(nomeCell.v).trim() : "",
+        sacola: sacolaCell ? String(sacolaCell.v).trim() : "",
+        contacto: contactoCell ? String(contactoCell.v).trim() : "",
+        valor: valorCell ? (Number(valorCell.v) || 0) : 0,
+        link: linkCell ? String(linkCell.v).trim() : ""
+      };
+    }
+
+    let groupsOut;
+
+    if (flow.groupMode === "positional"){
+      // Compra: cada linha com Data/Nome/Contacto preenchido é uma entrega nova, mesmo que
+      // repita um nome/contacto de outra linha. Só junta a uma entrega já aberta quando a
+      // linha vem completamente em branco (sem Data, Nome e Contacto) e tem link ou valor —
+      // ou seja, é mesmo uma linha de continuação, não uma compra independente.
+      groupsOut = [];
+      let current = null;
+      for (let r = 2; r <= lastRow; r++){
+        const row = readRow(r);
+        const identityBlank = !row.dateDisplay && !row.nome && !row.contacto;
+        if (!identityBlank){
+          if (!row.nome) continue; // sem nome não há cliente a identificar
+          current = { sacola:"", nome:row.nome, contacto:row.contacto, valor:0, links:[], dateDisplay:row.dateDisplay };
+          groupsOut.push(current);
+        } else if (flow.fillDownNome && current && (row.link || row.valor)){
+          // linha de continuação verdadeira: junta-se à entrega atual
+        } else {
+          continue;
+        }
+        current.valor += row.valor;
+        if (row.link) current.links.push(row.link);
+      }
+    } else {
+      // Chegada: agrupa por número de sacola (sempre que a sacola repete, é mesmo a mesma
+      // encomenda). Linhas de continuação podem vir sem sacola (e às vezes sem nome) — nesse
+      // caso preenchem com os dados da última sacola vista.
+      const rawRows = [];
+      let lastNome = "", lastContacto = "", lastSacola = "";
+      for (let r = 2; r <= lastRow; r++){
+        let { dateDisplay, nome, sacola, contacto, valor, link } = readRow(r);
+        const isContinuation = !sacola && (link || valor) && lastSacola;
+        if (flow.fillDownNome && isContinuation){
+          if (!nome) nome = lastNome;
+          sacola = lastSacola;
+          if (!contacto) contacto = lastContacto;
+        }
+        if (!nome && !sacola) continue;
+        if (nome) lastNome = nome;
+        if (sacola) lastSacola = sacola;
+        if (contacto) lastContacto = contacto;
+        rawRows.push({ nome, sacola, contacto, valor, link, dateDisplay });
+      }
+
+      const groups = new Map();
+      const order = [];
+      rawRows.forEach(row=>{
+        const gk = row.sacola;
+        if (!groups.has(gk)){
+          groups.set(gk, {sacola:row.sacola, nome:row.nome, contacto:row.contacto, valor:0, links:[], dateDisplay:row.dateDisplay});
+          order.push(gk);
+        }
+        const g = groups.get(gk);
+        if (!g.nome && row.nome) g.nome = row.nome;
+        if (!g.contacto && row.contacto) g.contacto = row.contacto;
+        if (!g.dateDisplay && row.dateDisplay) g.dateDisplay = row.dateDisplay;
+        g.valor += row.valor;
+        if (row.link) g.links.push(row.link);
+      });
+      groupsOut = order.map(gk=>groups.get(gk));
+    }
+
+    return groupsOut.map((g, idx)=>{
+      const key = (flow.hasSacola ? g.sacola : digitsOnly(g.contacto)) + "|" + digitsOnly(g.contacto) + "|" + idx;
+      const entry = {
+        key, sacola: g.sacola, nome: g.nome, contacto: g.contacto, valor: g.valor,
+        temValor: g.valor > 0, links: g.links, dateDisplay: g.dateDisplay,
+        sent: false, sentAt: null
+      };
+      entry.message = buildMessage(entry, flow);
+      return entry;
+    });
+  }
+
+  // ---------------- Render ----------------
+  const clientListEl = $("#clientList"), clientSearch = $("#clientSearch");
+  const countsLabel = $("#countsLabel"), messageScroll = $("#messageScroll");
+  const summaryGrid = $("#summaryGrid"), activeDetail = $("#activeDetail");
+
+  function visibleEntries(){
+    const q = normalize(clientSearch.value);
+    if (!q) return entries;
+    return entries.filter(e=> normalize(e.nome + " " + (e.sacola||"")).includes(q));
+  }
+
+  function renderAll(){
+    renderClientList();
+    renderSummary();
+  }
+
+  function renderClientList(){
+    const list = visibleEntries();
+    const sent = entries.filter(e=>e.sent).length;
+    countsLabel.textContent = sent + "/" + entries.length + " Enviados";
+    if (!list.length){
+      clientListEl.innerHTML = `<div class="empty-list">Nenhum cliente corresponde à busca.</div>`;
+      return;
+    }
+    clientListEl.innerHTML = list.map(e=>{
+      const badge = e.temValor ? `<span class="badge warn">${formatMZN(e.valor)}</span>` : "";
+      const metaExtra = activeFlow.hasSacola ? `<span>sacola ${escapeHtml(e.sacola)}</span>` : `<span></span>`;
+      return `<div class="client-card ${e.key===activeKey?'active':''}" data-key="${e.key}">
+        <div class="name-row">
+          <span class="name">${escapeHtml(e.nome)}</span>
+          ${e.sent ? '<span class="done-tick">✓</span>' : ''}
+        </div>
+        <div class="meta">
+          ${metaExtra}
+          ${badge}
+        </div>
+      </div>`;
+    }).join("");
+    clientListEl.querySelectorAll(".client-card").forEach(card=>{
+      card.addEventListener("click", ()=> selectEntry(card.dataset.key));
+    });
+  }
+
+  function renderSummary(){
+    const total = entries.length;
+    const sent = entries.filter(e=>e.sent).length;
+    summaryGrid.innerHTML = `
+      <div class="summary-box"><div class="num">${total}</div><div class="lbl">Total</div></div>
+      <div class="summary-box"><div class="num" style="color:var(--ok);">${sent}</div><div class="lbl">Enviados</div></div>
+      <div class="summary-box"><div class="num">${total-sent}</div><div class="lbl">Pendentes</div></div>
+    `;
+  }
+
+  function escapeHtml(s){
+    return (s||"").toString().replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
+
+  function selectEntry(key){
+    activeKey = key;
+    renderClientList();
+    renderActiveDetail();
+    renderMessage();
+  }
+
+  function getActive(){ return entries.find(e=>e.key===activeKey) || null; }
+
+  function renderActiveDetail(){
+    const e = getActive();
+    if (!e){ activeDetail.innerHTML = `<p class="empty-note">Escolhe um cliente na lista da esquerda.</p>`; return; }
+    activeDetail.innerHTML = `
+      <div class="detail-line"><span>Cliente:</span> ${escapeHtml(e.nome)}</div>
+      ${activeFlow.hasSacola ? `<div class="detail-line"><span>Sacola:</span> ${escapeHtml(e.sacola)}</div>` : ""}
+      <div class="detail-line"><span>Contacto:</span> ${escapeHtml(e.contacto)}</div>
+      <div class="detail-line"><span>Data:</span> ${e.dateDisplay}</div>
+      <div class="detail-line"><span>Valor:</span> ${e.temValor ? formatMZN(e.valor) : "Nenhum"}</div>
+      ${e.links.length ? e.links.map((l,i)=>`<div class="detail-line"><a href="${l}" target="_blank" style="color:var(--accent);font-weight:600;text-decoration:none;">Abrir link ${e.links.length>1 ? (i+1) : ""}</a></div>`).join("") : ""}
+      ${e.sent ? `<div class="detail-line" style="color:var(--ok);">Enviado em ${new Date(e.sentAt).toLocaleString("pt-PT")}</div>` : ""}
+    `;
+  }
+
+  function renderMessage(){
+    const e = getActive();
+    if (!e){
+      messageScroll.innerHTML = `<div class="entry-empty">Escolhe um cliente na lista da esquerda para ver a mensagem.</div>`;
+      return;
+    }
+    const htmlMsg = escapeHtml(e.message).replace(/\*(.+?)\*/g, '<span class="ph">$1</span>');
+    const subLine = (activeFlow.hasSacola ? "sacola " + escapeHtml(e.sacola) + " · " : "") + (e.temValor ? "com valor" : "sem valor");
+    messageScroll.innerHTML = `
+      <div class="message-card">
+        <div class="top-row">
+          <div>
+            <h3>${escapeHtml(e.nome)}</h3>
+            <div class="sub">${subLine}</div>
+          </div>
+        </div>
+        <div class="bubble-wrap"><div class="bubble">${htmlMsg}</div></div>
+        <div class="actions">
+          <button class="btn" id="openWaBtn">Abrir no WhatsApp</button>
+          <button class="btn ghost-light" id="copyBtn">Copiar mensagem</button>
+          <button class="btn ghost-light" id="toggleSentBtn">${e.sent ? "Desfazer envio" : "Marcar como enviado"}</button>
+        </div>
+        ${e.sent ? `<div class="sent-flag">✓ Enviado em ${new Date(e.sentAt).toLocaleString("pt-PT")}</div>` : ""}
+      </div>
+    `;
+    $("#openWaBtn").addEventListener("click", ()=>{
+      window.open(waLink(e.contacto, e.message), "_blank");
+      const wasSent = e.sent;
+      markSent(e.key, true);
+      if (!wasSent) advanceToNext(e.key);
+    });
+    $("#copyBtn").addEventListener("click", async ()=>{
+      try{
+        await navigator.clipboard.writeText(e.message);
+        const btn = $("#copyBtn"); const old = btn.textContent;
+        btn.textContent = "Copiado ✓";
+        setTimeout(()=>{ btn.textContent = old; }, 1400);
+      }catch(err){ alert("Não consegui copiar automaticamente. Seleciona o texto manualmente."); }
+    });
+    $("#toggleSentBtn").addEventListener("click", ()=> markSent(e.key, !e.sent));
+  }
+
+  function advanceToNext(key){
+    const list = visibleEntries();
+    const i = list.findIndex(x=>x.key===key);
+    if (i !== -1 && i + 1 < list.length){
+      selectEntry(list[i+1].key);
+    }
+  }
+
+  function markSent(key, value){
+    const e = entries.find(x=>x.key===key);
+    if (!e) return;
+    e.sent = value;
+    e.sentAt = value ? new Date().toISOString() : null;
+    renderSummary();
+    renderClientList();
+    renderActiveDetail();
+    renderMessage();
+  }
+
+  clientSearch.addEventListener("input", renderClientList);
+
+})();
+</script>
+</body>
+</html>
