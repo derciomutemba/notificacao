@@ -178,7 +178,7 @@
   <span class="tag" id="topTag">à espera do ficheiro…</span>
   <div class="spacer"></div>
   <button class="btn ghost small" id="resetBtn" style="display:none;">Sair</button>
-  <span class="app-version">v16</span>
+  <span class="app-version">v17</span>
 </div>
 
 <div class="upload-wrap">
@@ -208,6 +208,11 @@
           <textarea id="tplSem-compra" rows="8"></textarea>
           <label>Mensagem — com valor remanescente</label>
           <textarea id="tplCom-compra" rows="9"></textarea>
+          <p class="hint-small" style="margin-top:14px;">Mensagens em inglês — usadas quando o nome do cliente tiver "(EN)". Códigos: <code>{data}</code> <code>{valor}</code> <code>{links_verb_en}</code> <code>{links_label_en}</code> <code>{links}</code>.</p>
+          <label>Message — sem valor remanescente (EN)</label>
+          <textarea id="tplSemEn-compra" rows="8"></textarea>
+          <label>Message — com valor remanescente (EN)</label>
+          <textarea id="tplComEn-compra" rows="9"></textarea>
           <div class="tpl-actions">
             <button class="btn small tpl-save" id="tplSave-compra">Guardar mensagens</button>
             <button class="btn ghost-light small tpl-reset" id="tplReset-compra">Repor texto original</button>
@@ -233,11 +238,16 @@
       <div class="tpl-editor">
         <button class="btn ghost-light small tpl-toggle" id="tplToggle-chegada">✎ Editar mensagens</button>
         <div class="tpl-body" id="tplBody-chegada" style="display:none;">
-          <p class="hint-small">Códigos disponíveis: <code>{data}</code> <code>{sacola}</code> <code>{valor}</code> <code>{links_verb}</code> <code>{links_label}</code> <code>{links}</code>. Texto entre *asteriscos* fica em negrito no WhatsApp.</p>
+          <p class="hint-small">Códigos disponíveis: <code>{data}</code> <code>{sacola}</code> <code>{sacola_intro}</code> <code>{valor}</code> <code>{links_verb}</code> <code>{links_label}</code> <code>{links}</code>. Texto entre *asteriscos* fica em negrito no WhatsApp.</p>
           <label>Mensagem — sem valor em falta</label>
           <textarea id="tplSem-chegada" rows="8"></textarea>
           <label>Mensagem — com valor em falta</label>
           <textarea id="tplCom-chegada" rows="9"></textarea>
+          <p class="hint-small" style="margin-top:14px;">Mensagens em inglês — usadas quando o nome do cliente tiver "(EN)". Códigos: <code>{data}</code> <code>{sacola}</code> <code>{sacola_intro_en}</code> <code>{valor}</code> <code>{links_verb_en}</code> <code>{links_label_en}</code> <code>{links}</code>.</p>
+          <label>Message — sem valor em falta (EN)</label>
+          <textarea id="tplSemEn-chegada" rows="8"></textarea>
+          <label>Message — com valor em falta (EN)</label>
+          <textarea id="tplComEn-chegada" rows="9"></textarea>
           <div class="tpl-actions">
             <button class="btn small tpl-save" id="tplSave-chegada">Guardar mensagens</button>
             <button class="btn ghost-light small tpl-reset" id="tplReset-chegada">Repor texto original</button>
@@ -306,7 +316,7 @@ Abaixo, {links_verb} {links_label} com os artigos adquiridos. Agradeço que nos 
   const DEFAULT_TPL_CHEGADA_SEM = `Olá, aqui escreve Dércio.
 
 A encomenda do dia de {data} chegou e está disponível para levantamento na Malhangalene (Rua do Príncipe Godido x Rua da Guarda), de segunda a sexta, das 8h às 17h, e ao sábado, das 8h às 12h (excepto feriados).
-Ao chegar, contacte 873150160 e informe que veio levantar a sacola número *{sacola}*.
+Ao chegar, contacte 873150160 e informe que veio levantar {sacola_intro}*{sacola}*.
 Para entregas na cidade, contacte o motoboy Horácio (848131388 ou 878131388) e o custo é de 100,00 MZN.
 A encomenda estará disponível por 2 semanas.
 Abaixo, {links_verb} {links_label} com os artigos que chegaram.
@@ -321,6 +331,38 @@ A encomenda estará disponível por 2 semanas.
 Abaixo, {links_verb} {links_label} com os artigos que chegaram.
 {links}`;
 
+  // ---------------- Templates em inglês (usados quando o nome do cliente tem "(EN)") ----------------
+  const DEFAULT_TPL_COMPRA_SEM_EN = `Hello, this is Dércio.
+
+We have already placed the order, with estimated arrival on {data}. However, it may arrive before, on, or after that date.
+Below {links_verb_en} {links_label_en} to the items purchased. Please let us know if there's any mistake.
+{links}`;
+
+  const DEFAULT_TPL_COMPRA_COM_EN = `Hello, this is Dércio.
+
+We have already placed the order, with estimated arrival on {data}. However, it may arrive before, on, or after that date.
+Just a reminder that there is an outstanding balance of *{valor}*, which can be paid when the order arrives.
+Below {links_verb_en} {links_label_en} to the items purchased. Please let us know if there's any mistake.
+{links}`;
+
+  const DEFAULT_TPL_CHEGADA_SEM_EN = `Hello, this is Dércio.
+
+Your order from {data} has arrived and is available for pickup in Malhangalene (Rua do Príncipe Godido x Rua da Guarda), Monday to Friday from 8am to 5pm, and Saturday from 8am to 12pm (except holidays).
+When you arrive, please contact 873150160 and let them know you've come to collect {sacola_intro_en}*{sacola}*.
+For deliveries within the city, contact the courier Horácio (848131388 or 878131388); the cost is 100,00 MZN.
+The order will be available for 2 weeks.
+Below {links_verb_en} {links_label_en} to the items that have arrived.
+{links}`;
+
+  const DEFAULT_TPL_CHEGADA_COM_EN = `Hello, this is Dércio.
+
+Your order from {data} has arrived, but the outstanding balance, *{valor}*, must be transferred in order to receive the bag number.
+Pickup is at Malhangalene (Rua do Príncipe Godido x Rua da Guarda), Monday to Friday from 8am to 5pm, and Saturday from 8am to 12pm (except holidays).
+For deliveries within the city, contact the courier Horácio (848131388 or 878131388); the cost is 100,00 MZN.
+The order will be available for 2 weeks.
+Below {links_verb_en} {links_label_en} to the items that have arrived.
+{links}`;
+
   // ---------------- Configuração dos dois espaços ----------------
   const FLOWS = {
     compra: {
@@ -329,7 +371,8 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
       hasSacola: false, groupMode: "positional", fillDownNome: true,
       storageKey: "notif_tpl_compra_v1",
       defaultSem: DEFAULT_TPL_COMPRA_SEM, defaultCom: DEFAULT_TPL_COMPRA_COM,
-      tpl: { sem: DEFAULT_TPL_COMPRA_SEM, com: DEFAULT_TPL_COMPRA_COM }
+      defaultSemEn: DEFAULT_TPL_COMPRA_SEM_EN, defaultComEn: DEFAULT_TPL_COMPRA_COM_EN,
+      tpl: { sem: DEFAULT_TPL_COMPRA_SEM, com: DEFAULT_TPL_COMPRA_COM, semEn: DEFAULT_TPL_COMPRA_SEM_EN, comEn: DEFAULT_TPL_COMPRA_COM_EN }
     },
     chegada: {
       id: "chegada", label: "Aviso de Chegada",
@@ -337,7 +380,8 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
       hasSacola: true, groupMode: "byValue", fillDownNome: true,
       storageKey: "notif_tpl_chegada_v1",
       defaultSem: DEFAULT_TPL_CHEGADA_SEM, defaultCom: DEFAULT_TPL_CHEGADA_COM,
-      tpl: { sem: DEFAULT_TPL_CHEGADA_SEM, com: DEFAULT_TPL_CHEGADA_COM }
+      defaultSemEn: DEFAULT_TPL_CHEGADA_SEM_EN, defaultComEn: DEFAULT_TPL_CHEGADA_COM_EN,
+      tpl: { sem: DEFAULT_TPL_CHEGADA_SEM, com: DEFAULT_TPL_CHEGADA_COM, semEn: DEFAULT_TPL_CHEGADA_SEM_EN, comEn: DEFAULT_TPL_CHEGADA_COM_EN }
     }
   };
 
@@ -383,23 +427,38 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
     return {
       verb: list.length > 1 ? "seguem" : "segue",
       label: list.length > 1 ? "os links" : "o link",
+      verbEn: list.length > 1 ? "are" : "is",
+      labelEn: list.length > 1 ? "the links" : "the link",
       block: list.join("\n\n")
     };
   }
 
   function buildMessage(e, flow){
-    const tpl = e.temValor ? flow.tpl.com : flow.tpl.sem;
+    const nomeTrim = (e.nome || "").trim();
+    const isEnglish = /\(EN\)/i.test(nomeTrim);
+    const tpl = isEnglish
+      ? (e.temValor ? flow.tpl.comEn : flow.tpl.semEn)
+      : (e.temValor ? flow.tpl.com : flow.tpl.sem);
     const li = linksInfo(e.links);
+
+    // Sacola com "Caixa" no código (ex: "Caixa 2890"): não repete "sacola número", usa o código tal como está
+    const isCaixa = /^caixa\b/i.test((e.sacola||"").trim());
+    const sacolaIntro = isCaixa ? "a " : "a sacola número ";
+    const sacolaIntroEn = isCaixa ? "" : "bag number ";
+
     let msg = tpl
       .replace(/\{data\}/g, e.dateDisplay)
       .replace(/\{sacola\}/g, e.sacola || "")
+      .replace(/\{sacola_intro\}/g, sacolaIntro)
+      .replace(/\{sacola_intro_en\}/g, sacolaIntroEn)
       .replace(/\{valor\}/g, formatMZN(e.valor))
       .replace(/\{links_verb\}/g, li.verb)
       .replace(/\{links_label\}/g, li.label)
+      .replace(/\{links_verb_en\}/g, li.verbEn)
+      .replace(/\{links_label_en\}/g, li.labelEn)
       .replace(/\{links\}/g, li.block);
 
     // Clientes com (BM) ou (RdB) no nome: acrescenta o nome no fim, depois de uma linha em branco
-    const nomeTrim = (e.nome || "").trim();
     if (/\((BM|RdB)\)\s*$/.test(nomeTrim)){
       msg += "\n\n" + nomeTrim;
     }
@@ -414,14 +473,20 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
         const saved = JSON.parse(raw);
         if (saved.sem) flow.tpl.sem = saved.sem;
         if (saved.com) flow.tpl.com = saved.com;
+        if (saved.semEn) flow.tpl.semEn = saved.semEn;
+        if (saved.comEn) flow.tpl.comEn = saved.comEn;
       }
     }catch(e){ /* usa os templates por defeito */ }
     $("#tplSem-"+flow.id).value = flow.tpl.sem;
     $("#tplCom-"+flow.id).value = flow.tpl.com;
+    $("#tplSemEn-"+flow.id).value = flow.tpl.semEn;
+    $("#tplComEn-"+flow.id).value = flow.tpl.comEn;
   }
   function saveTemplates(flow){
     flow.tpl.sem = $("#tplSem-"+flow.id).value || flow.defaultSem;
     flow.tpl.com = $("#tplCom-"+flow.id).value || flow.defaultCom;
+    flow.tpl.semEn = $("#tplSemEn-"+flow.id).value || flow.defaultSemEn;
+    flow.tpl.comEn = $("#tplComEn-"+flow.id).value || flow.defaultComEn;
     try{ localStorage.setItem(flow.storageKey, JSON.stringify(flow.tpl)); }catch(e){ /* fica só em memória */ }
     const status = $("#tplStatus-"+flow.id);
     status.textContent = "Guardado ✓";
@@ -438,9 +503,11 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
     });
     $("#tplSave-"+flow.id).addEventListener("click", ()=> saveTemplates(flow));
     $("#tplReset-"+flow.id).addEventListener("click", ()=>{
-      if (!confirm("Repor o texto original das duas mensagens deste espaço? Perdes as alterações feitas.")) return;
+      if (!confirm("Repor o texto original das mensagens deste espaço (incluindo as em inglês)? Perdes as alterações feitas.")) return;
       $("#tplSem-"+flow.id).value = flow.defaultSem;
       $("#tplCom-"+flow.id).value = flow.defaultCom;
+      $("#tplSemEn-"+flow.id).value = flow.defaultSemEn;
+      $("#tplComEn-"+flow.id).value = flow.defaultComEn;
       saveTemplates(flow);
     });
 
@@ -722,7 +789,7 @@ Abaixo, {links_verb} {links_label} com os artigos que chegaram.
       </div>
     `;
     $("#openWaBtn").addEventListener("click", ()=>{
-      window.open(waLink(e.contacto, e.message), "_blank");
+      window.location.href = waLink(e.contacto, e.message);
       const wasSent = e.sent;
       markSent(e.key, true);
       if (!wasSent) advanceToNext(e.key);
