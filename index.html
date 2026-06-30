@@ -114,6 +114,8 @@
   .client-card.active{background:var(--accent);}
   .client-card .name-row{display:flex;align-items:center;gap:6px;}
   .client-card .name{font-size:13px;font-weight:600;}
+  .client-card .num-order{font-family:var(--mono);font-size:11px;color:#9a9490;font-weight:400;}
+  .client-card.active .num-order{color:#ffd8bb;}
   .client-card .meta{font-size:11px;color:#cfcabd;font-family:var(--mono);margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:6px;}
   .client-card.active .meta{color:#ffe8d8;}
   .client-card .done-tick{color:#88c98a;font-weight:700;}
@@ -164,9 +166,30 @@
 
   @media (max-width:980px){
     .workspace{flex-direction:column;}
-    .clients-panel{width:100%;max-height:160px;}
-    .current-panel{width:100%;max-height:220px;}
-    .main-panel{border-left:none;border-right:none;}
+    .clients-panel{width:100%;max-height:200px;}
+    .current-panel{width:100%;max-height:none;order:3;}
+    .main-panel{border-left:none;border-right:none;order:2;}
+    .clients-panel{order:1;}
+  }
+
+  @media (max-width:680px){
+    .topbar h1{font-size:13px;}
+    .topbar .tag{display:none;}
+    .upload-wrap{margin:20px auto;padding:0 12px 40px;}
+    .upload-wrap h2{font-size:18px;}
+    .flow-grid{grid-template-columns:1fr;}
+    .flow-card{padding:14px;}
+    .btn{padding:10px 14px;font-size:14px;}
+    .btn.small{padding:8px 12px;font-size:13px;}
+    .bubble{font-size:14px;padding:14px 14px;}
+    .message-card .top-row h3{font-size:15px;}
+    .actions{flex-direction:column;}
+    .actions .btn{width:100%;text-align:center;}
+    .summary-grid{grid-template-columns:1fr 1fr 1fr;}
+    .clients-panel{max-height:180px;}
+    .client-card{padding:10px 8px;}
+    .client-card .name{font-size:14px;}
+    .tpl-body textarea{font-size:13px;}
   }
 </style>
 </head>
@@ -178,7 +201,7 @@
   <span class="tag" id="topTag">à espera do ficheiro…</span>
   <div class="spacer"></div>
   <button class="btn ghost small" id="resetBtn" style="display:none;">Sair</button>
-  <span class="app-version">v17</span>
+  <span class="app-version">v20</span>
 </div>
 
 <div class="upload-wrap">
@@ -315,7 +338,7 @@ Abaixo, {links_verb} {links_label} com os artigos adquiridos. Agradeço que nos 
 
   const DEFAULT_TPL_CHEGADA_SEM = `Olá, aqui escreve Dércio.
 
-A encomenda do dia de {data} chegou e está disponível para levantamento na Malhangalene (Rua do Príncipe Godido x Rua da Guarda), de segunda a sexta, das 8h às 17h, e ao sábado, das 8h às 12h (excepto feriados).
+A encomenda do dia {data} chegou e está disponível para levantamento na Malhangalene (Rua do Príncipe Godido x Rua da Guarda), de segunda a sexta, das 8h às 17h, e ao sábado, das 8h às 12h (excepto feriados).
 Ao chegar, contacte 873150160 e informe que veio levantar {sacola_intro}*{sacola}*.
 Para entregas na cidade, contacte o motoboy Horácio (848131388 ou 878131388) e o custo é de 100,00 MZN.
 A encomenda estará disponível por 2 semanas.
@@ -435,7 +458,7 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
 
   function buildMessage(e, flow){
     const nomeTrim = (e.nome || "").trim();
-    const isEnglish = /\(EN\)/i.test(nomeTrim);
+    const isEnglish = /\bEN\b/.test(nomeTrim);
     const tpl = isEnglish
       ? (e.temValor ? flow.tpl.comEn : flow.tpl.semEn)
       : (e.temValor ? flow.tpl.com : flow.tpl.sem);
@@ -707,12 +730,12 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
       clientListEl.innerHTML = `<div class="empty-list">Nenhum cliente corresponde à busca.</div>`;
       return;
     }
-    clientListEl.innerHTML = list.map(e=>{
+    clientListEl.innerHTML = list.map((e, idx)=>{
       const badge = e.temValor ? `<span class="badge warn">${formatMZN(e.valor)}</span>` : "";
       const metaExtra = activeFlow.hasSacola ? `<span>sacola ${escapeHtml(e.sacola)}</span>` : `<span></span>`;
       return `<div class="client-card ${e.key===activeKey?'active':''}" data-key="${e.key}">
         <div class="name-row">
-          <span class="name">${escapeHtml(e.nome)}</span>
+          <span class="name"><span class="num-order">${idx+1}.</span> ${escapeHtml(e.nome)}</span>
           ${e.sent ? '<span class="done-tick">✓</span>' : ''}
         </div>
         <div class="meta">
