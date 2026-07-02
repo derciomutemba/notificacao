@@ -69,7 +69,11 @@
   .drop.has-file{border-color:var(--ok);background:var(--ok-soft);}
   .drop p{margin:0 0 12px;font-size:12.5px;color:var(--ink-soft);}
   .drop input[type=file]{display:block;font-size:12px;width:100%;}
-  .drop .filename{margin-top:10px;font-size:12px;font-family:var(--mono);color:var(--ink);word-break:break-all;}
+  .file-label{display:inline-block;cursor:pointer;margin-top:6px;}
+  .file-chosen{display:inline-flex;align-items:center;gap:8px;margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%;box-sizing:border-box;width:fit-content;}
+  .file-chosen-name{font-size:12px;font-family:var(--mono);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .file-remove{background:none;border:none;color:var(--ink-soft);font-size:14px;cursor:pointer;padding:0 2px;line-height:1;flex:0 0 auto;}
+  .file-remove:hover{color:var(--warn);}
 
   .flow-card .start-row{margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .status-msg{font-size:12.5px;color:var(--ink-soft);}
@@ -201,7 +205,7 @@
   <span class="tag" id="topTag">à espera do ficheiro…</span>
   <div class="spacer"></div>
   <button class="btn ghost small" id="resetBtn" style="display:none;">Sair</button>
-  <span class="app-version">v20</span>
+  <span class="app-version">v26</span>
 </div>
 
 <div class="upload-wrap">
@@ -216,8 +220,12 @@
       <p class="desc">Avisa o cliente de que a compra foi feita e informa a previsão de chegada.</p>
       <div class="drop" id="drop-compra">
         <p>Célula A1: previsão de chegada. A partir da linha 2: nome, contacto, link, valor remanescente.</p>
-        <input type="file" id="file-compra" accept=".xlsx,.xls">
-        <div class="filename" id="filename-compra"></div>
+        <input type="file" id="file-compra" accept=".xlsx,.xls" style="display:none;">
+        <div class="file-chosen" id="file-chosen-compra" style="display:none;">
+          <span class="file-chosen-name" id="filename-compra"></span>
+          <button class="file-remove" id="file-remove-compra" title="Remover ficheiro">✕</button>
+        </div>
+        <label class="btn ghost-light small file-label" id="file-label-compra" for="file-compra">Escolher ficheiro</label>
       </div>
       <div class="start-row">
         <button class="btn" id="start-compra" disabled>Preparar mensagens</button>
@@ -251,8 +259,12 @@
       <p class="desc">Avisa o cliente de que a encomenda chegou e está disponível para levantamento.</p>
       <div class="drop" id="drop-chegada">
         <p>Célula A1: data da compra. A partir da linha 2: sacola, nome, contacto, valor em falta, link.</p>
-        <input type="file" id="file-chegada" accept=".xlsx,.xls">
-        <div class="filename" id="filename-chegada"></div>
+        <input type="file" id="file-chegada" accept=".xlsx,.xls" style="display:none;">
+        <div class="file-chosen" id="file-chosen-chegada" style="display:none;">
+          <span class="file-chosen-name" id="filename-chegada"></span>
+          <button class="file-remove" id="file-remove-chegada" title="Remover ficheiro">✕</button>
+        </div>
+        <label class="btn ghost-light small file-label" id="file-label-chegada" for="file-chegada">Escolher ficheiro</label>
       </div>
       <div class="start-row">
         <button class="btn" id="start-chegada" disabled>Preparar mensagens</button>
@@ -538,27 +550,56 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
     const fileInput = $("#file-"+flow.id);
     fileInput.addEventListener("change", (ev)=>{
       xlsxFiles[flow.id] = ev.target.files[0] || null;
-      $("#filename-"+flow.id).textContent = xlsxFiles[flow.id] ? xlsxFiles[flow.id].name : "";
-      $("#drop-"+flow.id).classList.toggle("has-file", !!xlsxFiles[flow.id]);
+      updateFileUI(flow);
       $("#start-"+flow.id).disabled = !xlsxFiles[flow.id];
     });
+    $("#file-remove-"+flow.id).addEventListener("click", ()=>{
+      xlsxFiles[flow.id] = null;
+      $("#file-"+flow.id).value = "";
+      updateFileUI(flow);
+      $("#start-"+flow.id).disabled = true;
+      $("#status-"+flow.id).textContent = "";
+    });
+
+    function updateFileUI(flow){
+      const file = xlsxFiles[flow.id];
+      const chosen = $("#file-chosen-"+flow.id);
+      const label = $("#file-label-"+flow.id);
+      const nameEl = $("#filename-"+flow.id);
+      if (file){
+        // Mostra só o nome do ficheiro sem extensão, truncado se necessário
+        const shortName = file.name.replace(/\.(xlsx?|xls)$/i, "");
+        nameEl.textContent = shortName;
+        chosen.style.display = "flex";
+        label.style.display = "none";
+      } else {
+        nameEl.textContent = "";
+        chosen.style.display = "none";
+        label.style.display = "inline-block";
+      }
+      $("#drop-"+flow.id).classList.toggle("has-file", !!file);
+    }
 
     $("#start-"+flow.id).addEventListener("click", async ()=>{
       const btn = $("#start-"+flow.id), status = $("#status-"+flow.id);
       btn.disabled = true;
       status.textContent = "A processar Excel…";
+      status.style.color = "";
       try{
         entries = await parseFlowExcel(xlsxFiles[flow.id], flow);
       }catch(err){
-        status.textContent = "Erro a ler o Excel: " + err.message;
+        status.textContent = err.message;
+        status.style.color = "var(--warn)";
         btn.disabled = false;
         return;
       }
       if (!entries.length){
-        status.textContent = "Não encontrei nenhuma linha com dados a partir da linha 2.";
+        status.textContent = "Nenhum cliente encontrado. Confirma que o ficheiro tem dados nas colunas correctas.";
+        status.style.color = "var(--warn)";
         btn.disabled = false;
         return;
       }
+      status.style.color = "";
       activeFlow = flow;
       document.body.classList.add("ready");
       topTag().textContent = flow.label + " · " + (xlsxFiles[flow.id].name||"") + " · " + entries.length + " cliente(s)";
@@ -584,11 +625,39 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
       const fileInput = $("#file-"+flow.id);
       if (fileInput) fileInput.value = "";
       $("#filename-"+flow.id).textContent = "";
+      $("#file-chosen-"+flow.id).style.display = "none";
+      $("#file-label-"+flow.id).style.display = "inline-block";
       $("#drop-"+flow.id).classList.remove("has-file");
       $("#start-"+flow.id).disabled = true;
       $("#status-"+flow.id).textContent = "";
     });
   });
+
+  // Configuração dos cabeçalhos esperados por espaço (linha 1, em minúsculas sem acentos)
+  const FLOW_HEADERS = {
+    compra:  ["data", "nome", "contacto", "link", "valor"],
+    chegada: ["data", "codigo", "nome", "contacto", "valor", "link"]
+  };
+
+  function normalizeHeader(s){
+    return (s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+
+  function validateHeaders(ws, flow){
+    const expected = FLOW_HEADERS[flow.id];
+    const found = expected.map((_, i)=>{
+      const col = String.fromCharCode(65 + i); // A, B, C...
+      const cell = ws[col+"1"];
+      return cell ? normalizeHeader(cell.v) : "";
+    });
+    // Verifica se pelo menos 3 cabeçalhos batem certo (tolerância para colunas extra ou em branco)
+    const matches = expected.filter((h, i) => found[i] === h).length;
+    if (matches < 3){
+      const outro = flow.id === "compra" ? "Aviso de Chegada" : "Aviso de Compra";
+      const esperados = expected.map(h=>h.charAt(0).toUpperCase()+h.slice(1)).join(", ");
+      throw new Error(`Este ficheiro não é compatível com o espaço "${flow.label}".\n\nCabeçalhos esperados: ${esperados}.\nCabeçalhos encontrados: ${found.filter(Boolean).map(h=>h.charAt(0).toUpperCase()+h.slice(1)).join(", ") || "(nenhum)"}.\n\nSe quiseres enviar avisos de ${outro}, usa o espaço correto.`);
+    }
+  }
 
   function looksLikeDateCell(raw){
     if (raw instanceof Date && !isNaN(raw)) return true;
@@ -597,22 +666,56 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
   }
 
   async function parseFlowExcel(file, flow){
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, {type:"array", cellDates:true});
+    // Validar extensão
+    if (!/\.(xlsx?|xls)$/i.test(file.name)){
+      throw new Error("Ficheiro inválido. Importa um ficheiro Excel (.xlsx ou .xls).");
+    }
 
-    // Procura, entre todas as folhas do ficheiro, a primeira em que A2 pareça uma data
-    // (a linha 1 é o cabeçalho; assim ignora automaticamente outras folhas, como "Clientes").
-    let ws = null;
+    let wb;
+    try {
+      const buf = await file.arrayBuffer();
+      wb = XLSX.read(buf, {type:"array", cellDates:true});
+    } catch(e){
+      throw new Error("Não foi possível ler o ficheiro. Confirma que é um Excel válido e não está protegido por palavra-passe.");
+    }
+
+    if (!wb.SheetNames || !wb.SheetNames.length){
+      throw new Error("O ficheiro Excel está vazio — não tem nenhuma folha.");
+    }
+
+    // Procura a folha certa: A2 tem de parecer uma data
+    let ws = null, foundSheet = null;
     for (const sheetName of wb.SheetNames){
       const candidate = wb.Sheets[sheetName];
       const a2 = candidate["A2"] ? candidate["A2"].v : null;
-      if (looksLikeDateCell(a2)){ ws = candidate; break; }
+      if (looksLikeDateCell(a2)){ ws = candidate; foundSheet = sheetName; break; }
     }
-    if (!ws) throw new Error("Não encontrei nenhuma folha com uma data válida em A2.");
+    if (!ws){
+      const nomesEsperados = flow.id === "compra"
+        ? "Data (A), Nome (B), Contacto (C), Link (D), Valor (E)"
+        : "Data (A), Código (B), Nome (C), Contacto (D), Valor (E), Link (F)";
+      throw new Error(`Este ficheiro não é compatível com o espaço "${flow.label}".\n\nA célula A2 deve ter uma data válida (ex: 20/07).\n\nColunas esperadas: ${nomesEsperados}.`);
+    }
+
+    // Validar cabeçalhos (linha 1) para garantir que o ficheiro é para este espaço
+    validateHeaders(ws, flow);
 
     const range = XLSX.utils.decode_range(ws["!ref"]);
     const lastRow = range.e.r + 1;
     const cols = flow.cols;
+
+    // Verificar se há pelo menos uma linha com Nome ou Sacola preenchido
+    let hasData = false;
+    for (let r = 2; r <= lastRow; r++){
+      const nomeCell = ws[cols.nome+r];
+      const sacolaCell = cols.sacola ? ws[cols.sacola+r] : null;
+      if ((nomeCell && String(nomeCell.v).trim()) || (sacolaCell && String(sacolaCell.v).trim())){
+        hasData = true; break;
+      }
+    }
+    if (!hasData){
+      throw new Error(`O ficheiro não tem dados nas colunas esperadas a partir da linha 2.\n\nConfirma que o ficheiro é para o espaço "${flow.label}" e que tem dados nas colunas correctas.`);
+    }
 
     function readRow(r){
       const dateCell = ws[cols.data+r];
@@ -825,7 +928,11 @@ Below {links_verb_en} {links_label_en} to the items that have arrived.
         setTimeout(()=>{ btn.textContent = old; }, 1400);
       }catch(err){ alert("Não consegui copiar automaticamente. Seleciona o texto manualmente."); }
     });
-    $("#toggleSentBtn").addEventListener("click", ()=> markSent(e.key, !e.sent));
+    $("#toggleSentBtn").addEventListener("click", ()=>{
+      const wasSent = e.sent;
+      markSent(e.key, !e.sent);
+      if (!wasSent) advanceToNext(e.key);
+    });
   }
 
   function advanceToNext(key){
